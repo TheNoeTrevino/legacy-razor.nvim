@@ -25,13 +25,17 @@ deps: $(PLENARY)
 $(PLENARY):
 	git clone --depth 1 https://github.com/nvim-lua/plenary.nvim $(PLENARY)
 
-## Format all Lua in place with stylua (uses ./stylua.toml).
+## Format Lua (stylua, ./stylua.toml) and C# (dotnet format, ./.editorconfig) in place.
 fmt:
 	stylua lua/ plugin/ tests/
+	dotnet format server/LegacyRazor.Server.csproj --severity warn
+	dotnet format server.tests/LegacyRazor.Server.Tests.csproj --severity warn
 
 ## Check formatting without writing; non-zero exit on any diff (CI-friendly).
 fmt-check:
 	stylua --check lua/ plugin/ tests/
+	dotnet format server/LegacyRazor.Server.csproj --severity warn --verify-no-changes
+	dotnet format server.tests/LegacyRazor.Server.Tests.csproj --severity warn --verify-no-changes
 
 ## Remove build + test artifacts.
 clean:
