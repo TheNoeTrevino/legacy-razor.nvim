@@ -1,0 +1,9 @@
+# C# server build output
+server/bin/
+server/obj/
+server.tests/bin/
+server.tests/obj/
+
+# Lua test harness (lazy.minit isolated stdpath + cloned deps)
+.tests/
+.deps/
