@@ -38,7 +38,7 @@ describe("server release coordinates", function()
   it("builds a github release download url", function()
     local url = server.asset_url(server.required_server)
     assert.is_truthy(
-      url:find("github.com/thenoetrevino/legacy-razor-ls/releases/download/v", 1, true)
+      url:find("github.com/TheNoeTrevino/legacy-razor-ls/releases/download/v", 1, true)
     )
     assert.is_truthy(url:find(server.asset_name(server.required_server), 1, true))
   end)

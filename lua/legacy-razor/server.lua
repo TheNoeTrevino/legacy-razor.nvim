@@ -1,7 +1,7 @@
 -- Locate (and, on request, download) the LegacyRazor.Server binary.
 --
 -- The server ships separately from this plugin, from
--- github.com/thenoetrevino/legacy-razor-ls. Resolution order, first hit wins:
+-- github.com/TheNoeTrevino/legacy-razor-ls. Resolution order, first hit wins:
 --   1. an explicit config override (lsp.server_exe)
 --   2. a mason-installed legacy-razor-ls
 --   3. a version-pinned download in stdpath('data') (see :LegacyRazorUpdate)
@@ -14,7 +14,7 @@ local M = {}
 M.required_server = "0.1.0"
 
 local EXE = "LegacyRazor.Server.exe"
-local REPO = "thenoetrevino/legacy-razor-ls"
+local REPO = "TheNoeTrevino/legacy-razor-ls"
 
 local function exists(path)
   return path ~= nil and vim.uv.fs_stat(path) ~= nil

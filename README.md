@@ -1,6 +1,6 @@
 # legacy-razor.nvim
 
-Neovim integration for [**legacy-razor-ls**](https://github.com/thenoetrevino/legacy-razor-ls) -
+Neovim integration for [**legacy-razor-ls**](https://github.com/TheNoeTrevino/legacy-razor-ls) -
 a language server that brings **hover, completion, document-highlight, and live
 diagnostics** to **classic ASP.NET MVC (System.Web) Razor views**, which no modern
 tooling understands. Plus a whole-app compile check into the quickfix list.
@@ -13,7 +13,7 @@ tooling understands. Plus a whole-app compile check into the quickfix list.
 ```
 
 The language server does the real work - it hosts the *real* `System.Web.Razor` v3
-pipeline and Roslyn (see the [server repo](https://github.com/thenoetrevino/legacy-razor-ls)
+pipeline and Roslyn (see the [server repo](https://github.com/TheNoeTrevino/legacy-razor-ls)
 for how and why). This plugin is the thin Neovim client: it launches the server,
 routes `.cshtml` buffers to it, drives occurrence highlighting, gets Roslyn out of
 the way, and adds `:LegacyRazorCheck`.
@@ -29,7 +29,7 @@ the way, and adds `:LegacyRazorCheck`.
 
 ```lua
 {
-  "thenoetrevino/legacy-razor.nvim",
+  "TheNoeTrevino/legacy-razor.nvim",
   enabled = vim.fn.has("win32") == 1,
   ft = "razor",
   cmd = { "LegacyRazorCheck", "LegacyRazorUpdate" },
@@ -44,7 +44,7 @@ Then get the language server with **any** of:
 - **`:MasonInstall legacy-razor-ls`** - if you use
   [mason.nvim](https://github.com/williamboman/mason.nvim).
 - **Your own build** - clone
-  [legacy-razor-ls](https://github.com/thenoetrevino/legacy-razor-ls),
+  [legacy-razor-ls](https://github.com/TheNoeTrevino/legacy-razor-ls),
   `dotnet build -c Release server/LegacyRazor.Server.csproj`, and set
   `lsp.server_exe` to the resulting `LegacyRazor.Server.exe`. (Checked out *beside*
   this plugin, it's picked up automatically.)
