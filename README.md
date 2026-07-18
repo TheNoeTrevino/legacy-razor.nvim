@@ -13,13 +13,23 @@ served through the editor's built-in LSP client.
 
 ## Why
 
-Modern Razor tooling (the Roslyn language server's co-hosted Razor engine, rzls,
-VS Code's C# extension) only understands **ASP.NET Core** Razor. Views based on
-`System.Web.Mvc.WebViewPage<T>` - every MVC 5 / .NET Framework app - get nothing
-from any LSP-based editor. Only full Visual Studio ever supported them, via
-in-process "contained language" machinery that can't be extracted.
+"Razor" is really two unrelated stacks that share only a file extension:
 
-This plugin rebuilds that machinery as a standalone LSP server:
+- **Classic** (this): `System.Web.Mvc.WebViewPage<T>`, compiled by `System.Web.Razor`
+  v3, configured via `Views/web.config` - .NET Framework, every MVC 5 app.
+- **Core**: `RazorPage<T>`, the Razor SDK, `_ViewImports.cshtml`.
+
+Every modern Razor tool - the Roslyn language server's co-hosted Razor engine,
+`rzls`, VS Code's C# extension - only understands the **Core** stack. Point one at
+a classic `WebViewPage<T>` view and it resolves nothing: not `@model`, not the base
+type, not the web.config imports. The one tool that ever handled classic Razor was
+full Visual Studio, through in-process "contained language" machinery welded into
+the IDE - no process boundary, nothing an external editor can attach to.
+
+So a classic view in any LSP-based editor gets nothing. This fills that gap, and
+crucially it does **not** reimplement Razor or C# analysis - it hosts the *real*
+production machinery (`System.Web.Razor` generates the C#, Roslyn analyzes it) and
+adds only the glue:
 
 1. **Generate** the view's C# with the real `System.Web.Razor` v3 pipeline
    (`MvcWebPageRazorHost`, so `@model`/`@Html`/`web.config` imports all resolve),
