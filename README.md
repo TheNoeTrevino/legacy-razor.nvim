@@ -1,8 +1,9 @@
 # legacy-razor.nvim
 
-Full language support - **hover, completion, document-highlight, and live
-diagnostics** - for **classic ASP.NET MVC (System.Web) Razor views** in Neovim,
-served through the editor's built-in LSP client.
+Neovim integration for [**legacy-razor-ls**](https://github.com/thenoetrevino/legacy-razor-ls) -
+a language server that brings **hover, completion, document-highlight, and live
+diagnostics** to **classic ASP.NET MVC (System.Web) Razor views**, which no modern
+tooling understands. Plus a whole-app compile check into the quickfix list.
 
 ```
 @model BalanceHistoryViewModel
@@ -11,61 +12,45 @@ served through the editor's built-in LSP client.
 @Model.                  -- completion -> AccountHistoryItems, TodayBalance, FromDate, ...
 ```
 
-## Why
-
-"Razor" is really two unrelated stacks that share only a file extension:
-
-- **Classic** (this): `System.Web.Mvc.WebViewPage<T>`, compiled by `System.Web.Razor`
-  v3, configured via `Views/web.config` - .NET Framework, every MVC 5 app.
-- **Core**: `RazorPage<T>`, the Razor SDK, `_ViewImports.cshtml`.
-
-Every modern Razor tool - the Roslyn language server's co-hosted Razor engine,
-`rzls`, VS Code's C# extension - only understands the **Core** stack. Point one at
-a classic `WebViewPage<T>` view and it resolves nothing: not `@model`, not the base
-type, not the web.config imports. The one tool that ever handled classic Razor was
-full Visual Studio, through in-process "contained language" machinery welded into
-the IDE - no process boundary, nothing an external editor can attach to.
-
-So a classic view in any LSP-based editor gets nothing. This fills that gap, and
-crucially it does **not** reimplement Razor or C# analysis - it hosts the *real*
-production machinery (`System.Web.Razor` generates the C#, Roslyn analyzes it) and
-adds only the glue:
-
-1. **Generate** the view's C# with the real `System.Web.Razor` v3 pipeline
-   (`MvcWebPageRazorHost`, so `@model`/`@Html`/`web.config` imports all resolve),
-   in **design-time mode** so every code region is emitted verbatim.
-2. **Host** it as a Roslyn `Document` compiled against the app's `bin/`.
-3. **Map** positions both ways through Razor's design-time line mappings, which
-   record the exact source and generated columns of each code region - so a
-   cursor in the `.cshtml` becomes a position in the generated C#, and Roslyn's
-   answers map back to `.cshtml`.
-4. **Serve** it over LSP (hover / completion / documentHighlight / diagnostics)
-   so Neovim's native client and your completion engine consume it directly.
+The language server does the real work - it hosts the *real* `System.Web.Razor` v3
+pipeline and Roslyn (see the [server repo](https://github.com/thenoetrevino/legacy-razor-ls)
+for how and why). This plugin is the thin Neovim client: it launches the server,
+routes `.cshtml` buffers to it, drives occurrence highlighting, gets Roslyn out of
+the way, and adds `:LegacyRazorCheck`.
 
 ## Requirements
 
 - Windows (the plugin is inert elsewhere, safe in shared dotfiles)
-- .NET SDK (to build the server) + .NET Framework 4.x (runtime, preinstalled)
+- .NET Framework 4.x (runtime, preinstalled on Windows)
 - The web app must have been **built** (`bin/` populated) so views resolve types
+- The server binary - installed one of three ways (see below)
 
 ## Install (lazy.nvim)
 
 ```lua
 {
-  dir = "~/projects/legacy-razor",
+  "thenoetrevino/legacy-razor.nvim",
   enabled = vim.fn.has("win32") == 1,
   ft = "razor",
-  cmd = "LegacyRazorCheck",
-  build = "dotnet build -c Release server/LegacyRazor.Server.csproj",
+  cmd = { "LegacyRazorCheck", "LegacyRazorUpdate" },
   opts = {},
 }
 ```
 
-`build` compiles the LSP server on install/update. To build by hand:
+Then get the language server with **any** of:
 
-```
-dotnet build -c Release server/LegacyRazor.Server.csproj
-```
+- **`:LegacyRazorUpdate`** - downloads the prebuilt server (matched to this plugin's
+  pinned version) into `stdpath("data")`. No .NET SDK required.
+- **`:MasonInstall legacy-razor-ls`** - if you use
+  [mason.nvim](https://github.com/williamboman/mason.nvim).
+- **Your own build** - clone
+  [legacy-razor-ls](https://github.com/thenoetrevino/legacy-razor-ls),
+  `dotnet build -c Release server/LegacyRazor.Server.csproj`, and set
+  `lsp.server_exe` to the resulting `LegacyRazor.Server.exe`. (Checked out *beside*
+  this plugin, it's picked up automatically.)
+
+The plugin resolves the binary in that order - override → mason → download → sibling
+build - and, if none is found, tells you exactly how to get one.
 
 ## What you get
 
@@ -85,10 +70,10 @@ for checking every view at once.
 {
   lsp = {
     enabled = true,
-    server_exe = nil,          -- explicit path; nil = auto-detect in the plugin
+    server_exe = nil,          -- explicit path; nil = auto-resolve (mason/download/sibling)
     document_highlight = true, -- occurrence highlighting on CursorHold
     suppress_roslyn = true,    -- detach Roslyn/OmniSharp from classic views
-    notify_errors = true,      -- warn once if the server isn't built
+    notify_errors = true,      -- warn once if the server isn't installed
   },
   -- whole-app aspnet_compiler sweep (:LegacyRazorCheck)
   aspnet_compiler = nil,       -- explicit path; nil = auto-detect
@@ -106,37 +91,26 @@ their Roslyn client.
 ## Architecture
 
 ```
-Neovim (vim.lsp client)                        lua/legacy-razor/
-  │  LSP over stdio (one server per app root)    ├─ project    app-root + view detection
-  ▼                                              ├─ lsp        attach + Roslyn takeover
-LegacyRazor.Server (net472)  server/             ├─ server     locate the built exe
-  ├─ RoslynHost   design-time Razor gen +        ├─ compiler   aspnet_compiler -> quickfix
-  │  ViewSession  Roslyn workspace, region map,  └─ init       setup + :LegacyRazorCheck
-  │               hover/complete/highlight/diagnostics
-  ├─ References   .NET Framework + facades + app bin/
-  ├─ WebConfig    Views/web.config imports + base type
-  ├─ RazorGen     CodeDOM -> C# text
-  ├─ Protocol     the 0-based position DTOs
-  └─ LspServer    JSON-RPC framing + handlers  (Program launches it)
+Neovim (vim.lsp client)                 lua/legacy-razor/
+  │  LSP over stdio                       ├─ project    app-root + view detection
+  │  (one server per app root)            ├─ lsp        attach + Roslyn takeover
+  ▼                                       ├─ server     resolve/download the server binary
+legacy-razor-ls (separate repo)          ├─ compiler   aspnet_compiler -> quickfix
+  the LegacyRazor.Server.exe process      └─ init       setup + :LegacyRazorCheck / :LegacyRazorUpdate
 ```
 
 ## Development
 
-Two test suites, driven by a Makefile:
-
 ```
-make test          # both suites
-make test-server   # xUnit over the C# engine (dotnet test)
-make test-lua      # plenary-busted over the Lua glue (headless Neovim)
-make fmt           # stylua
+make test        # plenary-busted specs (headless Neovim)
+make fmt         # stylua
+make fmt-check   # stylua --check (CI)
 ```
 
-The engine tests are self-contained: they use a framework type as the model
-(`@model System.String`) so no fixture assembly needs compiling. `make` and
-`stylua` install via scoop; the underlying commands also run standalone.
+`make` and `stylua` install via scoop; the underlying commands also run standalone.
 
 ## Limitations
 
 - Hovering the bare `Model` keyword (not a member) may be empty; members work.
 - Classic Razor only; ASP.NET Core Razor is already served by rzls/Roslyn.
-- UTF-16 column edge cases in non-ASCII lines are approximated.
+- Windows only (classic ASP.NET is .NET Framework).
