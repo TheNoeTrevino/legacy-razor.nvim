@@ -7,12 +7,11 @@ on:
 
 jobs:
   test:
-    # The plugin targets classic ASP.NET (.NET Framework) on Windows, so test
-    # there - the specs exercise Windows path handling.
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
+    # The specs test pure Lua logic (path parsing, resolution order) with no real
+    # OS dependency, so run on Linux where PlenaryBustedDirectory is reliable -
+    # on Windows CI its child-process runner hangs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
