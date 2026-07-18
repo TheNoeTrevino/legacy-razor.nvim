@@ -4,18 +4,11 @@ PLENARY := $(DEPS)/plenary.nvim
 BUSTED := nvim --headless --noplugin -u tests/minimal_init.lua \
 	-c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua', sequential=true}"
 
-.PHONY: test test-lua test-server deps fmt fmt-check clean
+.PHONY: test deps fmt fmt-check clean
 
-## Run both suites (Lua glue + C# engine).
-test: test-lua test-server
-
-## Run the Lua spec suite under plenary-busted (one headless Neovim).
-test-lua:
+## Run the spec suite under plenary-busted (one headless Neovim).
+test:
 	$(BUSTED)
-
-## Run the C# engine suite under xUnit.
-test-server:
-	dotnet test server.tests/LegacyRazor.Server.Tests.csproj
 
 ## Clone test dependencies into .deps/ (idempotent). Not required if plenary is
 ## already installed via your plugin manager -- tests/minimal_init.lua falls back
@@ -25,18 +18,14 @@ deps: $(PLENARY)
 $(PLENARY):
 	git clone --depth 1 https://github.com/nvim-lua/plenary.nvim $(PLENARY)
 
-## Format Lua (stylua, ./stylua.toml) and C# (dotnet format, ./.editorconfig) in place.
+## Format Lua in place (stylua, ./stylua.toml).
 fmt:
 	stylua lua/ plugin/ tests/
-	dotnet format server/LegacyRazor.Server.csproj --severity warn
-	dotnet format server.tests/LegacyRazor.Server.Tests.csproj --severity warn
 
 ## Check formatting without writing; non-zero exit on any diff (CI-friendly).
 fmt-check:
 	stylua --check lua/ plugin/ tests/
-	dotnet format server/LegacyRazor.Server.csproj --severity warn --verify-no-changes
-	dotnet format server.tests/LegacyRazor.Server.Tests.csproj --severity warn --verify-no-changes
 
-## Remove build + test artifacts.
+## Remove test artifacts.
 clean:
-	rm -rf .tests $(DEPS) server/bin server/obj server.tests/bin server.tests/obj
+	rm -rf .tests $(DEPS)
