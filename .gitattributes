@@ -1,0 +1,3 @@
+# Check out LF everywhere, so Windows contributors' CRLF can't leak into the
+# repo (stylua enforces Unix line endings).
+* text=auto eol=lf
