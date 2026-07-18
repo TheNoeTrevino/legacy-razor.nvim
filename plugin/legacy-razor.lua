@@ -17,3 +17,9 @@ end, {
   complete = "dir",
   desc = "Compile-check classic ASP.NET MVC Razor views (errors -> quickfix)",
 })
+
+vim.api.nvim_create_user_command("LegacyRazorUpdate", function()
+  require("legacy-razor").update()
+end, {
+  desc = "Download the prebuilt legacy-razor language server (from GitHub Releases)",
+})

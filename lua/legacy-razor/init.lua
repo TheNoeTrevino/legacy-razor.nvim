@@ -5,7 +5,8 @@
 -- get nothing model-aware in any LSP-based editor. This plugin fills the gap
 -- two ways:
 --   * lsp.lua  -- a Roslyn-backed LSP server: hover, completion, document
---                 highlight, and live diagnostics (see server/).
+--                 highlight, and live diagnostics (the legacy-razor-ls repo;
+--                 fetched by :LegacyRazorUpdate).
 --   * M.check  -- :LegacyRazorCheck, a whole-app aspnet_compiler sweep into
 --                 quickfix (the same pipeline IIS runs), for checking every
 --                 view at once.
@@ -28,13 +29,14 @@ M.config = {
   -- via the Roslyn-backed LSP server, driven by Neovim's built-in client.
   lsp = {
     enabled = true,
-    -- Explicit path to LegacyRazor.Server.exe. nil = auto-detect in the plugin.
+    -- Explicit path to LegacyRazor.Server.exe. nil = auto-resolve
+    -- (mason -> :LegacyRazorUpdate download -> sibling Release build).
     server_exe = nil,
     -- Drive occurrence highlighting on CursorHold for the legacy-razor client.
     document_highlight = true,
     -- Detach Roslyn/OmniSharp from classic views (they only add noise there).
     suppress_roslyn = true,
-    -- Notify (once, as WARN) on setup problems like an unbuilt server.
+    -- Notify (once, as WARN) on setup problems like a missing server.
     notify_errors = true,
   },
 }
@@ -71,8 +73,7 @@ function M.check(root_arg, on_done)
     return
   end
 
-  local start = root_arg
-    or vim.api.nvim_buf_get_name(0)
+  local start = root_arg or vim.api.nvim_buf_get_name(0)
   if start == "" then
     start = assert(vim.uv.cwd())
   end
@@ -124,6 +125,22 @@ function M.check(root_arg, on_done)
     if on_done then
       on_done(code, items)
     end
+  end)
+end
+
+--- Download (or refresh) the prebuilt language server binary into the data dir.
+--- Wired to :LegacyRazorUpdate. Blocks briefly while the release downloads.
+---@param on_done fun(ok: boolean, msg: string)|nil
+function M.update(on_done)
+  local server = require("legacy-razor.server")
+  notify("Downloading LegacyRazor.Server v" .. server.required_server .. "…")
+  vim.schedule(function()
+    server.download(function(ok, msg)
+      notify(msg, ok and vim.log.levels.INFO or vim.log.levels.ERROR)
+      if on_done then
+        on_done(ok, msg)
+      end
+    end)
   end)
 end
 
