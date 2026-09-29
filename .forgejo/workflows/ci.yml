@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -15,10 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: stable
+      - name: Install Neovim
+        run: |
+          curl -fsSL https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz | sudo tar -xz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
 
       - name: Clone plenary
         run: git clone --depth 1 https://github.com/nvim-lua/plenary.nvim .deps/plenary.nvim
@@ -32,8 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: JohnnyMorganz/stylua-action@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          version: v2.1.0
-          args: --check lua/ plugin/ tests/
+      - name: Install StyLua
+        run: |
+          curl -fsSL -o /tmp/stylua.zip https://github.com/JohnnyMorganz/StyLua/releases/download/v2.1.0/stylua-linux-x86_64.zip
+          sudo unzip -o -q /tmp/stylua.zip -d /usr/local/bin
+      - name: Check formatting
+        run: stylua --check lua/ plugin/ tests/
