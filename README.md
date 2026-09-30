@@ -1,5 +1,8 @@
 # legacy-razor.nvim
 
+> Development happens at https://git.thenoetrevino.com/noe.trevino/legacy-razor.nvim.
+> GitHub is a read-only mirror. Please open issues and pull requests there.
+
 Neovim integration for [**legacy-razor-ls**](https://github.com/TheNoeTrevino/legacy-razor-ls) -
 a language server that brings **hover, completion, document-highlight, and live
 diagnostics** to **classic ASP.NET MVC (System.Web) Razor views**, which no modern
